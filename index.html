@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]> <html class="no-js ie6" lang="en"> <![endif]-->
+<!--[if IE 7]>    <html class="no-js ie7" lang="en"> <![endif]-->
+<!--[if IE 8]>    <html class="no-js ie8" lang="en"> <![endif]-->
+<!--[if gt IE 8]><!-->  <html class="no-js" lang="en"> <!--<![endif]-->
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+	
+	<title>Support Vector Machines</title>
+	
+	<meta name="description" content="A quick intro to the basics of practical linear algebra.">
+	<meta name="author" content="Onkur Sen">
+	<meta name="viewport" content="width=1024, user-scalable=no">
+	
+	<!-- Core and extension CSS files -->
+	<link rel="stylesheet" href="core/deck.core.css">
+	<link rel="stylesheet" href="extensions/goto/deck.goto.css">
+	<link rel="stylesheet" href="extensions/menu/deck.menu.css">
+	<link rel="stylesheet" href="extensions/navigation/deck.navigation.css">
+	<link rel="stylesheet" href="extensions/status/deck.status.css">
+	<link rel="stylesheet" href="extensions/hash/deck.hash.css">
+	<link rel="stylesheet" href="extensions/scale/deck.scale.css">
+	
+	<!-- Style theme. More available in /themes/style/ or create your own. -->
+	<link rel="stylesheet" href="themes/style/swiss.css">
+	
+	<!-- Transition theme. More available in /themes/transition/ or create your own. -->
+	<link rel="stylesheet" href="themes/transition/fade.css">
+	
+	<!-- MathJax: Displays Latex in HTML using regular syntax -->
+	<script type="text/javascript"
+	   src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+	
+	<script src="modernizr.custom.js"></script>
+	
+	<style>
+		.center {text-align: center; margin: 0 auto 0 auto;}
+	
+		.deck-container .deck-signature {
+		  position: absolute;
+		  bottom: 20px;
+		  left: 50px;
+		  color: #888;
+		  z-index: 3;
+		  margin: 0;
+		}
+
+		body.deck-container .deck-signature {
+		  position: fixed;
+		}
+
+		@media print {
+		  .deck-signature {
+		    display: none;
+		  }
+		}
+	</style>
+</head>
+
+<body class="deck-container">
+$$ \newcommand{\norm}[1]{ \lvert\lvert #1 \rvert\rvert}  $$
+
+<!-- Begin slides -->
+<section class="slide">
+	<div class="center">
+		<h2>The Classification Problem: Support Vector Machines and Kernel Methods</h2>
+		<h3>
+			Onkur Sen<br>
+			<a href="mailto:onkursen@gmail.com">onkursen@gmail.com</a><br>
+			<a href="http://twitter.com/onkursen">@onkursen</a><br>
+			May 11, 2012
+		</h3>
+	</div>
+</section>
+
+<section class="slide">
+	<h2>The Classification Problem</h2>
+	<p>
+		<ul>
+			<li>Two classes \(C_1, C_2\) with labels \(1, -1\) repsectively</li>
+			<li>Sample set \( \mathcal{X} = \{\mathbf{x}^t, r^t\}_{t=1}^N\) with known points and labels</li>
+			<li>
+				<strong>Goal</strong>: Find \( \mathbf{w}\) (discriminant vector) and \(w_0 \) (number) to separate the two classes of points, i.e.: 
+				\[ U^t \equiv r^t(\mathbf{w}^T \mathbf{x}^t + w_0) \geq 1 \mbox{ for all } t 
+				\]
+			</li>
+			<li><strong>Margin</strong>: distance from separation hyperplane to closest points</li>
+			<li>Best discriminant (optimal separation hyperplane) maximizes the margin so as to distinguish the classes in the clearest way</li>
+			<li>Maximizing the margin \( \Leftrightarrow \) minimizing \( \norm{\mathbf{w}}  \Rightarrow \) minimizing \( \frac{1}{2} \norm{\mathbf{w}}^2 = \frac{1}{2} \mathbf{w}^T \mathbf{w} \)</li>
+			<li>We have an optimization problem! Something to minimize under certain constraints.</li>
+		</ul>
+	</p>
+</section>
+
+<section class="slide">
+	<h2>Lagrangian for the Classification Problem</h2>
+	<p>
+	<ul>
+		<li>Let's look at this from the perspective of Lagrangian mechanics:</li>
+		<li>"Kinetic Energy": \( T = \frac{1}{2} \vert\vert\mathbf{w}\vert\vert^2 = \frac{1}{2} \mathbf{w}^T \mathbf{w} \)</li>
+		<li>"Potential Energy": \( U = \sum_{t=1}^N \alpha^t U^t \) (assume \(\alpha^t \geq 0\) for all \(t\))</li>
+		<li>Lagrangian \( L_p = T-U = \frac{1}{2} \mathbf{w}^T \mathbf{w} - \sum_{t=1}^N \alpha^t[r^t(\mathbf{w}^T \mathbf{x}^t + w_0)-1]\)</li>
+		<li>Optimize with respect to \(\mathbf{w}\) and \(w_0\):
+			<ul>
+				<li>
+					\( \frac{\partial L_p}{\partial \mathbf{w}} = 0 \Rightarrow \mathbf{w} = \sum_{t=1}^N \alpha^t r^t \mathbf{x}^t\)
+				</li>
+				<li>
+					\( \frac{\partial L_p}{\partial w_0} = 0 \Rightarrow \sum_{t=1}^N \alpha^t r^t =0 \)
+				</li>
+			</ul>
+		</li>
+	</ul>
+	</p>
+</section>
+
+<section class="slide">
+	<h2>New Lagrangian, New Problem</h2>
+	<ul>
+		<li>Plug expressions for \(\norm{\mathbf{w}}\) and \(w_0\) back into original expression to get "dual Lagrangian":
+			\[ L_d = -\frac{1}{2} \sum_{t=1}^N \sum_{s=1}^N \alpha^t \alpha^s r^t r^s (\mathbf{x}^t)^T \mathbf{x}^s  + \sum_{t=1}^N \alpha^t \]
+		</li>
+		<li>Maximize with respect to \(\alpha^t\) under previous constraints \(\Rightarrow \) most are zero!</li>
+		<li>The \(\mathbf{x}^t\) associated with the nonzero \(\alpha^t\) are called <strong>support vectors</strong>, and they satisfy the exact equality: 
+			\[ U^t = 0 \Rightarrow 
+			r^t(\mathbf{w}^T \mathbf{x}^t +w_0) = 1
+			\Rightarrow w_0 = r^t -\mathbf{w}^T \mathbf{x}^t \]
+		</li>
+		<li>For stability, take an average: \( w_0 = \frac{1}{N}\sum_{t=1}^N \left(r^t -\mathbf{w}^T \mathbf{x}^t \right) \)</li>
+		<li>Discriminant (now called <strong>support vector machine</strong>) is weighted sum of support vectors: \(\mathbf{w} = \sum_{t=1}^N \alpha^t \mathbf{x}^t\)</li>
+		<li>For the \(\alpha^t =0\), \(U^t>0 \Rightarrow\) points lie away from discriminant and do <strong>not</strong> affect classification result!</li>
+	</ul>
+</section>
+
+<section class="slide">
+	<h2>Problem?</h2>
+	<p style="font-size:50px;" class="center">
+		We assumed that there was a perfect solution to linearly separate the classes.<br>
+	</p>
+	<p style="font-size:50px;" class="center">
+		What if there isn't?
+		<ul class="center" style="list-style-type:none;">
+			<li>Data point is on wrong side of hyperplane</li>
+			<li>Data point is on correct side, but within the margin</li>
+		</ul>
+	</p>
+</section>
+
+<section class="slide">
+	<h2>Solution: Soft Margin Hyperplane</h2>
+	<ul>
+		<li>Introduce <strong>slack variables</strong> \(\xi^t \geq 0\). Proceed in the same fashion, but with small changes:</li>
+		<ul>
+			<li>Constraint becomes \(U^t + \xi^t \geq 0\)</li>
+			<li><strong>Soft error</strong> \(C\sum_{t=1}^n \xi^t\) added to kinetic energy (\(C=\) penalty term)</li>
+			<li>Linear combination \(\sum_{t=1}^n \mu^t \xi^t\) added to potential energy</li>
+			<li>Additional optimization constraint: \( \frac{\partial L_p}{\partial \xi^t} = 0 \Rightarrow C-\alpha^t-\mu^t = 0\ \)</li>
+		</ul>
+		</li>
+		<li><strong>Result</strong>:
+			<ul>
+				<li>Support vectors have \(\alpha^t >0\) again, SVM defined in same way</li>
+				<li>\(\alpha^t \lt C \Rightarrow \) support vectors are on margin; use to calculate \(w_0\) like before</li>
+				<li>\(\alpha^t = C\): problem data points mentioned before
+			</ul>
+		</li>
+	</ul>
+</section>
+
+<section class="slide">
+	<h2>Kernel Methods</h2>
+	<ul>
+		<li>Nonlinear transformation to a smaller \(k\)-dimensional space: \(\mathbf{z} = \mathbf{\phi}(\mathbf{x}) = \left( \phi_j(\mathbf{x}) \right)_{j=1}^k \)</li>
+		<li>Proceed as with soft margin hyperplane, except with \(\mathbf{x} \rightarrow \mathbf{\phi}(\mathbf{x})\):
+			\[
+			L_d = -\frac{1}{2} \sum_{t=1}^N \sum_{s=1}^N \alpha^t \alpha^s r^t r^s \mathbf{\phi}(\mathbf{x}^t)^T \mathbf{\phi}(\mathbf{x}^s)  + \sum_{t=1}^N \alpha^t
+			\]
+			</li>
+		<li>Define <strong>kernel function</strong> \( K(\mathbf{x}^t,\mathbf{x}^s) = \mathbf{\phi}(\mathbf{x}^t)^T \mathbf{\phi}(\mathbf{x}^s) \)
+		<li>Discriminant becomes: \( g(\mathbf{x}) = \mathbf{w}^T \mathbf{\phi}(\mathbf{x}) = \sum_{t=1}^N \alpha^t r^t  K(\mathbf{x}^t,\mathbf{x}) \)</li>
+		<li>If we have kernel function, we don't need to use the nonlinear transformation at all!</li>
+		<li><strong>Gram Matrix</strong>: kernel values \( \mathbf{K}_{ts} = K(\mathbf{x}^t,\mathbf{x}^s) \) should be symmetric, positive semidefinite</li>
+		<li>Great for use in bioinformatics, where number of dimensions is high; \(K\) produces a real number \(\Rightarrow\) cheaper to store</li>
+	</ul>
+</section>
+
+<section class='slide'>
+	<h2>Popular Kernel Functions</h2>
+	<ul>
+		<li>Polynomials: \(K(\mathbf{x}^t,\mathbf{x}) = (\mathbf{x}^T \mathbf{x}^t + 1)^q  \)</li>
+		<li>Radial-basis: \(K(\mathbf{x}^t,\mathbf{x}) = \exp{\left[ -\frac{\norm{\mathbf{x}^t-\mathbf{x}}^2}{2s^2}  \right]}\)</li>
+		<li>General distance: \(K(\mathbf{x}^t,\mathbf{x}) = \exp{\left[ -\frac{\mathcal{D}(\mathbf{x}^t,\mathbf{x})}{2s^2} \right]}\), where \(\mathcal{D}\) is a distince function</li>
+		<li>Sigmoidal: \(K(\mathbf{x}^t,\mathbf{x}) = \tanh{(2 \mathbf{x}^T \mathbf{x}^t + 1)}\)</li>
+		<li>Given two existing kernels  \(K_1(\mathbf{x},\mathbf{y}), K_2(\mathbf{x},\mathbf{y}) \), we can generate new ones:
+			<ul>
+				<li>\(K(\mathbf{x},\mathbf{y}) = cK_1(\mathbf{x},\mathbf{y})\)</li>
+				<li>\(K(\mathbf{x},\mathbf{y}) = K_1(\mathbf{x},\mathbf{y})+K_2(\mathbf{x},\mathbf{y})\)</li>
+				<li>\(K(\mathbf{x},\mathbf{y}) = K_1(\mathbf{x},\mathbf{y}) \cdot K_2(\mathbf{x},\mathbf{y})\)</li>
+			</ul>
+		</li>
+	</ul>
+</section>
+
+<section class="slide">
+	<h2>Kernel PCA</h2>
+	<ul>
+		<li>Regular Principal Components Analysis: examine eigenvectors with largest eigenvalues</li>
+		<li>Analyze eigenvalues, eigenvectors of kernel matrix as a dimensionality reduction</li>
+		<li>You get to choose the number of dimensions you want to analyze! Allows you to adjust resolution of problem</li>
+		<li>Can be applied similarly to linear dimensionality reduction (LDA)</li>
+	</ul>
+</section>
+
+<section class="slide">
+	<h2>Conclusion and Goals</h2>
+	<ul>
+		<li>Classification problem</li>
+		<li>Solution: support vectors and SVM</li>
+		<li>Data's not perfect! Soft margin</li>
+		<li>Kernel methods and dimensionality reduction</li>
+	</ul>
+	<p class="slide" style="font-size:40px;">Ultimately, we want to analyze big data and characterize it with small number of dimensions. This is the motivation behind using SVMs and kernel methods.</p>
+</section>
+
+<section class="slide">
+	<h2>Thanks for listening!</h2>
+	<p>
+		Here are some more resources:
+		<ul>
+			<li><a href="http://www.cmpe.boun.edu.tr/~ethem/i2ml2e/index.html">Introduction to Machine Learning</a>, by Ethem Alpaydin</li>
+			<li><a href="http://www.amazon.com/Pattern-Recognition-Learning-Information-Statistics/dp/0387310738">Pattern Recognition and Machine Learning</a>, by Christopher M. Bishop</li>
+			<li><a href="onkursen.nfshost.com/deck-js/linear_algebra/">Concise Linear Algebra</a> (a review of basic linear techniques)</li>
+		</ul>
+	</p>
+	<div class="center">
+		<h3>Questions? Comments?</h3>
+		<p>
+			Email: onkur at rice dot edu<br>
+			Twitter: <a href="http://twitter.com/onkursen">@onkursen</a>
+		</p>
+	</div>
+</section>
+
+<!-- deck.navigation snippet -->
+<a href="#" class="deck-prev-link" title="Previous">&#8592;</a>
+<a href="#" class="deck-next-link" title="Next">&#8594;</a>
+
+<!-- deck.status snippet -->
+<p class="deck-status">
+	<span class="deck-status-current"></span>
+	/
+	<span class="deck-status-total"></span>
+</p>
+
+<p class="deck-signature">
+	Onkur Sen
+</p>
+
+<!-- deck.goto snippet -->
+<form action="." method="get" class="goto-form">
+	<label for="goto-slide">Go to slide:</label>
+	<input type="text" name="slidenum" id="goto-slide" list="goto-datalist">
+	<datalist id="goto-datalist"></datalist>
+	<input type="submit" value="Go">
+</form>
+
+<!-- deck.hash snippet -->
+<a href="." title="Permalink to this slide" class="deck-permalink">#</a>
+
+
+<!-- Grab CDN jQuery, with a protocol relative URL; fall back to local if offline -->
+<script src="//ajax.aspnetcdn.com/ajax/jQuery/jquery-1.7.min.js"></script>
+<script>window.jQuery || document.write('<script src="jquery-1.7.min.js"><\/script>')</script>
+
+<!-- Deck Core and extensions -->
+<script src="core/deck.core.js"></script>
+<script src="extensions/hash/deck.hash.js"></script>
+<script src="extensions/menu/deck.menu.js"></script>
+<script src="extensions/goto/deck.goto.js"></script>
+<script src="extensions/status/deck.status.js"></script>
+<script src="extensions/navigation/deck.navigation.js"></script>
+<script src="extensions/scale/deck.scale.js"></script>
+
+<!-- Initialize the deck -->
+<script>
+$(function() {
+	$.deck('.slide');
+});
+</script>
+
+</body>
+</html>
